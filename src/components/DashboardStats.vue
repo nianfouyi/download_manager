@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-stats">
-    <div class="stat-card">
+    <div class="stat-card" @click="handleClick(0)">
       <div class="stat-icon download-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card" @click="handleClick(1)">
       <div class="stat-icon video-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="23 7 16 12 23 17 23 7"></polygon>
@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card" @click="handleClick(2)">
       <div class="stat-icon comic-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -40,7 +40,7 @@
       </div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card" @click="handleClick(3)">
       <div class="stat-icon complete-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -56,7 +56,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { defineProps, defineEmits } from 'vue'
+
+const props = defineProps({
   stats: {
     type: Object,
     required: true,
@@ -75,6 +77,12 @@ defineProps({
     })
   }
 })
+
+const emit = defineEmits(['switchTab'])
+
+function handleClick(tabIndex) {
+  emit('switchTab', tabIndex)
+}
 </script>
 
 <style scoped>
@@ -94,6 +102,7 @@ defineProps({
   align-items: center;
   gap: 1rem;
   transition: var(--transition);
+  cursor: pointer;
 }
 
 .stat-card:hover {

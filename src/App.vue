@@ -47,6 +47,11 @@ function handleTabChange(index) {
   activeTabIndex.value = index;
 }
 
+// 从卡片切换到对应标签页
+function handleTabSwitch(index) {
+  activeTabIndex.value = index;
+}
+
 // Download data
 const recentDownloads = ref([]);
 const isLoading = ref(true);
@@ -198,7 +203,10 @@ async function handleRetry(id) {
       <p>正在加载数据...</p>
     </div>
     <template v-else>
-      <DashboardStats :stats="stats" />
+      <DashboardStats 
+        :stats="stats" 
+        @switch-tab="handleTabSwitch"
+      />
 
       <DownloadList 
         :downloads="filteredDownloads" 
