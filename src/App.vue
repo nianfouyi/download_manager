@@ -185,6 +185,35 @@ async function handleRetry(id) {
     console.error("Error retrying download:", error);
   }
 }
+
+// 添加选中状态管理
+const selectedDownloads = ref(new Set());
+
+// 全选/取消全选功能
+function toggleSelectAll() {
+  if (selectedDownloads.value.size === filteredDownloads.value.length) {
+    // 如果已经全选，则取消全选
+    selectedDownloads.value.clear();
+  } else {
+    // 否则全选当前过滤的下载项
+    selectedDownloads.value = new Set(filteredDownloads.value.map(d => d.id));
+  }
+}
+
+// 切换单个下载项的选中状态
+function toggleSelectDownload(id) {
+  if (selectedDownloads.value.has(id)) {
+    selectedDownloads.value.delete(id);
+  } else {
+    selectedDownloads.value.add(id);
+  }
+}
+
+// 计算是否全选的状态
+const isAllSelected = computed(() => {
+  return filteredDownloads.value.length > 0 && 
+         selectedDownloads.value.size === filteredDownloads.value.length;
+});
 </script>
 
 <template>

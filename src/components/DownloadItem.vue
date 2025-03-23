@@ -1,5 +1,13 @@
 <template>
-  <div class="download-item" :class="download.status">
+  <div class="download-item" :class="{ 'selected': isSelected }">
+    <div class="download-select">
+      <input 
+        type="checkbox" 
+        :checked="isSelected" 
+        @change="$emit('select')" 
+        class="select-checkbox"
+      />
+    </div>
     <div class="download-thumbnail">
       <img :src="download.thumbnail" alt="thumbnail">
       <div class="download-type">{{ download.type }}</div>
@@ -81,10 +89,14 @@ const props = defineProps({
   download: {
     type: Object,
     required: true
+  },
+  isSelected: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['pause', 'resume', 'delete', 'retry'])
+const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'select'])
 
 function pauseDownload() {
   emit('pause', props.download.id)
@@ -117,6 +129,23 @@ function retryDownload() {
 .download-item:hover {
   transform: translateY(-2px);
   box-shadow: var(--box-shadow-hover);
+}
+
+.download-select {
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.select-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.download-item.selected {
+  background-color: rgba(67, 97, 238, 0.05);
+  border-left: 3px solid var(--primary-color);
 }
 
 .download-thumbnail {
@@ -303,6 +332,10 @@ function retryDownload() {
   
   .download-actions {
     margin-left: auto;
+  }
+  
+  .download-select {
+    margin-bottom: 0.5rem;
   }
 }
 </style> 

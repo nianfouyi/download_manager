@@ -3,12 +3,12 @@
     <div class="list-header">
       <h2 class="list-title">{{ title }}</h2>
       <div class="list-actions">
-        <button v-if="canSelectAll" class="action-btn select-all">
+        <button v-if="canSelectAll" class="action-btn select-all" @click="toggleSelectAll">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9 11 12 14 22 4"></polyline>
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
           </svg>
-          全选
+          {{ isAllSelected ? '取消全选' :'全选' }}
         </button>
         <div class="search-container">
           <input type="text" class="search-input" placeholder="搜索下载" v-model="searchQuery">
@@ -34,6 +34,8 @@
         v-for="download in filteredDownloads" 
         :key="download.id" 
         :download="download"
+        :is-selected="selectedDownloads.has(download.id)"
+        @select="toggleSelectDownload(download.id)"
         @pause="pauseDownload"
         @resume="resumeDownload"
         @delete="showDeleteModal"
@@ -85,6 +87,29 @@
 <script setup>
 import { ref, computed, defineProps, defineEmits } from 'vue'
 import DownloadItem from './DownloadItem.vue'
+
+
+const selectedDownloads = ref(new Set());
+
+function toggleSelectAll() {
+  if (selectedDownloads.value.size === filteredDownloads.value.length) {
+    selectedDownloads.value.clear();
+  } else {
+    selectedDownloads.value = new Set(filteredDownloads.value.map(d=> d.id));
+  }
+}
+
+function toggleSelectDownload(id) {
+  if (selectedDownloads.value.has(id)){
+    selectedDownloads.value.delete(id);
+  } else {
+    selectedDownloads.value.add(id);
+  }
+}
+
+const isAllSelected = computed(() => {
+  return filteredDownloads.value.length > 0 && selectedDownloads.value.size === filteredDownloads.value.length;
+});
 
 const props = defineProps({
   downloads: {
