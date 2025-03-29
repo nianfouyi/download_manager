@@ -8,7 +8,7 @@ import DownloadList from "./components/DownloadList.vue";
 import DownloadItem from "./components/DownloadItem.vue";
 import FloatingButton from "./components/FloatingButton.vue";
 import AddDownloadModal from "./components/AddDownloadModal.vue";
-import downloadService from "./api/downloadService";
+
 
 // Sidebar state
 const isSidebarActive = ref(false);

@@ -85,9 +85,8 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits } from 'vue'
+import { ref, computed, defineProps, defineEmits, onMounted, onUnmounted } from 'vue'
 import DownloadItem from './DownloadItem.vue'
-
 
 const selectedDownloads = ref(new Set());
 
@@ -141,6 +140,128 @@ const searchQuery = ref('')
 const showModal = ref(false)
 const downloadToDelete = ref(null)
 
+const pollingTimer = ref(null)
+const wsConnection = ref(null)
+
+const POLLING_INTERVAL = 2000 // 2秒轮询一次
+
+function connectWebSocket() {
+  wsConnection.value = new WebSocket('ws://localhost:8080/ws/downloads')
+  wsConnection.value.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    if (data.type === 'progress') {
+      updateDownloadProgress(data.downloadId, data.progress, data.speed, data.status)
+    }
+  }
+  wsConnection.value.onerror = (error) => {
+    console.error('WebSocket连接错误:', error)
+    startPolling()
+  }
+}
+
+function startPolling() {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+  }
+  
+  pollingTimer.value = setInterval(async () => {
+    try {
+      const response = await fetch('/api/downloads/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ids: props.downloads.map(d => d.id)
+        })
+      })
+      const data = await response.json()
+      if (data.code === 200) {
+        data.data.forEach(update => {
+          updateDownloadProgress(update.id, update.progress, update.speed, update.status)
+        })
+      }
+    } catch (error) {
+      console.error('获取下载进度失败:', error)
+    }
+  }, POLLING_INTERVAL)
+}
+
+function updateDownloadProgress(downloadId, progress, speed, status) {
+  const download = props.downloads.find(d => d.id === downloadId)
+  if (download) {
+    download.progress = progress
+    download.speed = speed
+    download.status = status
+  }
+}
+
+onMounted(async () => {
+  try {
+    // 尝试建立WebSocket连接
+    connectWebSocket()
+    
+    // 如果WebSocket连接失败，启动轮询
+    if (!wsConnection.value) {
+      startPolling()
+    }
+    
+    // 获取初始下载列表
+    await fetchDownloads()
+  } catch (error) {
+    console.error('初始化失败:', error)
+  }
+})
+
+onUnmounted(() => {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+  }
+  if (wsConnection.value) {
+    wsConnection.value.close()
+  }
+})
+
+async function pauseDownload(id) {
+  try {
+    const response = await fetch(`/api/downloads/${id}/pause`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      const download = props.downloads.find(d => d.id === id)
+      if (download) {
+        download.status = 'paused'
+      }
+    }
+  } catch (error) {
+    console.error('暂停下载失败:', error)
+  }
+}
+
+async function resumeDownload(id) {
+  try {
+    const response = await fetch(`/api/downloads/${id}/resume`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    const data = await response.json()
+    if (data.code === 200) {
+      const download = props.downloads.find(d => d.id === id)
+      if (download) {
+        download.status = 'downloading'
+      }
+    }
+  } catch (error) {
+    console.error('继续下载失败:', error)
+  }
+}
+
 const filteredDownloads = computed(() => {
   if (!searchQuery.value) {
     const start = (currentPage.value - 1) * props.itemsPerPage
@@ -181,14 +302,6 @@ function nextPage() {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
   }
-}
-
-function pauseDownload(id) {
-  emit('pause', id)
-}
-
-function resumeDownload(id) {
-  emit('resume', id)
 }
 
 function retryDownload(id) {

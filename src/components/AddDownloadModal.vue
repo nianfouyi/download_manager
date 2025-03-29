@@ -11,59 +11,50 @@
             </svg>
           </button>
         </div>
-        <div class="modal-body">
+        
+        <div v-if="!showDirectoryBrowser" class="modal-body">
           <form @submit.prevent="submitForm">
             <div class="form-group">
-              <label for="download-title">标题</label>
-              <input type="text" id="download-title" v-model="formData.title" required placeholder="输入下载标题">
+              <label for="download-url">下载链接</label>
+              <input 
+                type="url" 
+                id="download-url" 
+                v-model="formData.url" 
+                required 
+                placeholder="输入下载链接"
+              >
             </div>
             
             <div class="form-group">
-              <label for="download-type">类型</label>
-              <select id="download-type" v-model="formData.type" required>
-                <option value="">选择类型</option>
-                <option value="视频">视频</option>
-                <option value="漫画">漫画</option>
-                <option value="音频">音频</option>
-                <option value="电子书">电子书</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label for="download-quality">质量</label>
-              <select id="download-quality" v-model="formData.quality">
-                <option value="">选择质量</option>
-                <option value="4K">4K</option>
-                <option value="1080p">1080p</option>
-                <option value="720p">720p</option>
-                <option value="480p">480p</option>
-                <option value="360p">360p</option>
-                <option value="FLAC">FLAC</option>
-                <option value="320kbps">320kbps</option>
-                <option value="128kbps">128kbps</option>
-                <option value="高清">高清</option>
-                <option value="标准">标准</option>
-                <option value="文本">文本</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label for="download-size">大小</label>
-              <input type="text" id="download-size" v-model="formData.size" placeholder="输入大小（例如：1.5 GB）">
-            </div>
-            
-            <div class="form-group">
-              <label for="download-url">URL</label>
-              <input type="url" id="download-url" v-model="formData.url" required placeholder="输入下载链接">
-            </div>
-            
-            <div class="form-actions">
-              <button type="button" class="cancel-button" @click="closeModal">取消</button>
-              <button type="submit" class="submit-button" :disabled="!isFormValid">
-                开始下载
-              </button>
+              <label for="save-path">保存路径</label>
+              <div class="path-input-group">
+                <input 
+                  type="text" 
+                  id="save-path" 
+                  v-model="formData.savePath" 
+                  required 
+                  placeholder="选择保存路径"
+                  readonly
+                >
+                <button type="button" class="browse-button" @click="openDirectoryBrowser">
+                  浏览
+                </button>
+              </div>
             </div>
           </form>
+        </div>
+        
+        <div v-else class="modal-body directory-browser-container">
+          <DirectoryBrowser 
+            :initial-path="formData.savePath || '/'" 
+            @select="selectDirectory" 
+            @cancel="showDirectoryBrowser = false"
+          />
+        </div>
+        
+        <div v-if="!showDirectoryBrowser" class="modal-footer">
+          <button class="btn cancel" @click="closeModal">取消</button>
+          <button class="btn submit" @click="submitForm" :disabled="!isFormValid">开始下载</button>
         </div>
       </div>
     </div>
@@ -72,48 +63,72 @@
 
 <script setup>
 import { ref, computed, defineProps, defineEmits, watch } from 'vue'
+import DirectoryBrowser from './DirectoryBrowser.vue'
 
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    default: false
+    required: true
   }
 })
 
 const emit = defineEmits(['close', 'submit'])
 
 const formData = ref({
-  title: '',
-  type: '',
-  quality: '',
-  size: '',
-  url: ''
+  url: '',
+  savePath: ''
 })
+
+const showDirectoryBrowser = ref(false)
 
 const isFormValid = computed(() => {
-  return formData.value.title && formData.value.type && formData.value.url
+  return formData.value.url && formData.value.savePath
 })
 
-function submitForm() {
+async function submitForm() {
   if (isFormValid.value) {
-    emit('submit', { ...formData.value })
-    resetForm()
+    try {
+      const response = await fetch('/api/downloads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: formData.value.url,
+          savePath: formData.value.savePath
+        })
+      })
+      const data = await response.json()
+      if (data.code === 200) {
+        emit('submit', data.data)
+        closeModal()
+      }
+    } catch (error) {
+      console.error('添加下载失败:', error)
+    }
   }
 }
 
 function closeModal() {
+  showDirectoryBrowser.value = false
   emit('close')
   resetForm()
 }
 
 function resetForm() {
   formData.value = {
-    title: '',
-    type: '',
-    quality: '',
-    size: '',
-    url: ''
+    url: '',
+    savePath: ''
   }
+}
+
+function openDirectoryBrowser() {
+  showDirectoryBrowser.value = true
+}
+
+function selectDirectory(path) {
+  formData.value.savePath = path
+  showDirectoryBrowser.value = false
 }
 
 // Reset form when modal is closed
@@ -177,6 +192,11 @@ watch(() => props.isOpen, (newValue) => {
   padding: 1.5rem;
 }
 
+.directory-browser-container {
+  padding: 0;
+  height: 400px;
+}
+
 .form-group {
   margin-bottom: 1.25rem;
 }
@@ -188,8 +208,7 @@ watch(() => props.isOpen, (newValue) => {
   color: var(--text-primary);
 }
 
-.form-group input,
-.form-group select {
+.form-group input {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
@@ -199,22 +218,44 @@ watch(() => props.isOpen, (newValue) => {
   transition: var(--transition);
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.form-group input:focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-.form-actions {
+.path-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.path-input-group input {
+  flex: 1;
+}
+
+.browse-button {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: var(--border-radius);
+  background-color: white;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.browse-button:hover {
+  background-color: #f5f5f5;
+}
+
+.modal-footer {
+  padding: 1rem;
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
+  border-top: 1px solid #e0e0e0;
 }
 
-.cancel-button,
-.submit-button {
+.btn {
   padding: 0.75rem 1.5rem;
   border-radius: var(--border-radius);
   font-weight: 500;
@@ -222,27 +263,27 @@ watch(() => props.isOpen, (newValue) => {
   transition: var(--transition);
 }
 
-.cancel-button {
+.btn.cancel {
   background-color: transparent;
   border: 1px solid #e0e0e0;
   color: var(--text-secondary);
 }
 
-.cancel-button:hover {
+.btn.cancel:hover {
   background-color: #f5f5f5;
 }
 
-.submit-button {
+.btn.submit {
   background-color: var(--primary-color);
   color: white;
   border: none;
 }
 
-.submit-button:hover:not(:disabled) {
+.btn.submit:hover:not(:disabled) {
   background-color: #3951d4;
 }
 
-.submit-button:disabled {
+.btn.submit:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
