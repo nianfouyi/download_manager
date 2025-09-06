@@ -10,6 +10,9 @@ import FloatingButton from "./components/FloatingButton.vue";
 import AddDownloadModal from "./components/AddDownloadModal.vue";
 import downloadService from "./services/downloadService.js";
 
+// DownloadList 组件引用
+const downloadListRef = ref(null);
+
 
 // Sidebar state
 const isSidebarActive = ref(false);
@@ -45,11 +48,19 @@ const tabs = [
 const activeTabIndex = ref(0);
 
 function handleTabChange(index) {
+  // 清除之前选项卡的选中状态
+  if (downloadListRef.value) {
+    downloadListRef.value.clearSelection()
+  }
   activeTabIndex.value = index;
 }
 
 // 从卡片切换到对应标签页
 function handleTabSwitch(index) {
+  // 清除之前选项卡的选中状态
+  if (downloadListRef.value) {
+    downloadListRef.value.clearSelection()
+  }
   activeTabIndex.value = index;
 }
 
@@ -59,30 +70,42 @@ const isLoading = ref(true);
 
 // Filtered downloads based on active tab
 const filteredDownloads = computed(() => {
+  // 排序函数：按更新时间倒序排列（最新的在前面）
+  const sortByUpdatedTime = (items) => {
+    return items.slice().sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt);
+      const dateB = new Date(b.updatedAt || b.createdAt);
+      return dateB - dateA; // 倒序排列
+    });
+  };
+
+  let filtered;
+  
   if (activeTabIndex.value === 0) {
     // 所有下载
-    return recentDownloads.value;
+    filtered = recentDownloads.value;
   } else if (activeTabIndex.value === 1) {
     // 视频
-    return recentDownloads.value.filter((item) => item.type === "视频");
+    filtered = recentDownloads.value.filter((item) => item.type === "视频");
   } else if (activeTabIndex.value === 2) {
     // 漫画
-    return recentDownloads.value.filter((item) => item.type === "漫画");
+    filtered = recentDownloads.value.filter((item) => item.type === "漫画");
   } else if (activeTabIndex.value === 3) {
     // 已完成
-    return recentDownloads.value.filter((item) => item.status === "complete");
+    filtered = recentDownloads.value.filter((item) => item.status === "complete");
   } else if (activeTabIndex.value === 4) {
     // 正在下载 - 包含downloading状态的任务（包括原本的downloading和merging状态）
-    const downloadingItems = recentDownloads.value.filter(
-      (item) => item.status === "downloading"
-    );
-    console.log('🚀 正在下载的任务数量:', downloadingItems.length, '任务详情:', downloadingItems.map(item => ({id: item.id, status: item.status, title: item.title})));
-    return downloadingItems;
+    filtered = recentDownloads.value.filter((item) => item.status === "downloading");
+    console.log('🚀 正在下载的任务数量:', filtered.length, '任务详情:', filtered.map(item => ({id: item.id, status: item.status, title: item.title})));
   } else if (activeTabIndex.value === 5) {
     // 已暂停
-    return recentDownloads.value.filter((item) => item.status === "paused");
+    filtered = recentDownloads.value.filter((item) => item.status === "paused");
+  } else {
+    filtered = recentDownloads.value;
   }
-  return recentDownloads.value;
+  
+  // 对过滤后的结果按更新时间排序
+  return sortByUpdatedTime(filtered);
 });
 
 // Get active tab title
@@ -239,6 +262,7 @@ async function handleBatchRestart(ids) {
       />
 
       <DownloadList 
+        ref="downloadListRef"
         :downloads="filteredDownloads" 
         :title="activeTabTitle"
         @pause="handlePause"

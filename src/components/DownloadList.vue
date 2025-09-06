@@ -130,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineProps, defineEmits, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineProps, defineEmits, onMounted, onUnmounted, defineExpose } from 'vue'
 import DownloadItem from './DownloadItem.vue'
 
 const selectedDownloads = ref(new Set());
@@ -389,9 +389,18 @@ function confirmBatchDelete() {
   closeBatchModal()
 }
 
+function clearSelection() {
+  selectedDownloads.value.clear()
+}
+
 function closeBatchModal() {
   showBatchModal.value = false
 }
+
+// 暴露方法给父组件
+defineExpose({
+  clearSelection
+})
 </script>
 
 <style scoped>

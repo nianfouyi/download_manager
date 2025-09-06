@@ -59,7 +59,7 @@ class DownloadService {
     try {
       let allTasks = [];
       let offset = 0;
-      const limit = 20; // 使用默认的分页大小
+      const limit = 20; 
       let hasMore = true;
 
       while (hasMore) {
@@ -72,11 +72,9 @@ class DownloadService {
         const tasks = response.data.tasks || [];
         allTasks.push(...tasks);
         
-        // 如果返回的任务数少于limit，说明已经是最后一页
         hasMore = tasks.length === limit;
         offset += limit;
         
-        // 防止无限循环的安全措施
         if (allTasks.length > 10000) {
           console.warn('警告：任务数量过多，停止获取以避免性能问题');
           break;
@@ -93,10 +91,9 @@ class DownloadService {
   // Get recent downloads - 获取所有任务，不带状态过滤
   async getRecentDownloads() {
     try {
-      const tasks = await this.getAllTasks(); // 不传递任何参数，获取所有任务
-      console.log(`📊 获取到任务总数: ${tasks.length}`); // 添加调试信息
+      const tasks = await this.getAllTasks(); 
+      console.log(`📊 获取到任务总数: ${tasks.length}`); 
       
-      // 添加状态分布统计
       const statusCounts = {};
       tasks.forEach(task => {
         statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;
@@ -105,7 +102,6 @@ class DownloadService {
       
       const mappedTasks = tasks.map(task => this.mapTaskToDownloadItem(task));
       
-      // 添加映射后状态分布统计
       const mappedStatusCounts = {};
       mappedTasks.forEach(task => {
         mappedStatusCounts[task.status] = (mappedStatusCounts[task.status] || 0) + 1;

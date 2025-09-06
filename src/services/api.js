@@ -46,7 +46,12 @@ class ApiService {
   }
 
   async getTasks(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
+    const defaultParams = {
+      sort: 'updated_at',
+      order: 'desc',
+      ...params
+    };
+    const queryString = new URLSearchParams(defaultParams).toString();
     const endpoint = queryString ? `/tasks?${queryString}` : '/tasks';
     return this.fetch(endpoint);
   }

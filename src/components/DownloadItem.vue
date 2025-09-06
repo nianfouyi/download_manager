@@ -48,6 +48,7 @@
       <div class="download-info">
         <div class="info-item quality">{{ download.quality }}</div>
         <div class="info-item size">{{ download.size }}</div>
+        <div class="info-item updated-time">{{ formatUpdatedTime(download.updatedAt) }}</div>
       </div>
       
       <div v-if="download.status === 'downloading' || download.status === 'paused'" class="download-progress-container">
@@ -97,6 +98,34 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'select'])
+
+function formatUpdatedTime(updatedAt) {
+  if (!updatedAt) return ''
+  
+  const date = new Date(updatedAt)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  
+  if (diffMinutes < 1) {
+    return '刚刚'
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}分钟前`
+  } else if (diffHours < 24) {
+    return `${diffHours}小时前`
+  } else if (diffDays < 7) {
+    return `${diffDays}天前`
+  } else {
+    return date.toLocaleDateString('zh-CN', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+}
 
 function pauseDownload() {
   emit('pause', props.download.id)
@@ -208,6 +237,11 @@ function retryDownload() {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 0.25rem 0.75rem;
   border-radius: 1rem;
+}
+
+.info-item.updated-time {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
 }
 
 .download-progress-container {
