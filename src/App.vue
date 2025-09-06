@@ -47,21 +47,27 @@ const tabs = [
 ];
 const activeTabIndex = ref(0);
 
-function handleTabChange(index) {
+async function handleTabChange(index) {
   // 清除之前选项卡的选中状态
   if (downloadListRef.value) {
     downloadListRef.value.clearSelection()
   }
   activeTabIndex.value = index;
+  
+  // 切换选项卡时刷新数据
+  await refreshData();
 }
 
 // 从卡片切换到对应标签页
-function handleTabSwitch(index) {
+async function handleTabSwitch(index) {
   // 清除之前选项卡的选中状态
   if (downloadListRef.value) {
     downloadListRef.value.clearSelection()
   }
   activeTabIndex.value = index;
+  
+  // 切换选项卡时刷新数据
+  await refreshData();
 }
 
 // Download data
@@ -128,9 +134,8 @@ const stats = ref({
   }
 });
 
-// Fetch data on component mount
-onMounted(async () => {
-  isLoading.value = true;
+// 刷新数据的通用函数
+async function refreshData() {
   try {
     // Fetch all data in parallel
     const [recentData, statsData] = await Promise.all([
@@ -142,6 +147,14 @@ onMounted(async () => {
     stats.value = statsData;
   } catch (error) {
     console.error("Error fetching data:", error);
+  }
+}
+
+// Fetch data on component mount
+onMounted(async () => {
+  isLoading.value = true;
+  try {
+    await refreshData();
   } finally {
     isLoading.value = false;
   }
@@ -158,8 +171,7 @@ async function submitDownload(downloadData) {
     await downloadService.startDownload(downloadData);
 
     // Refresh the data
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
 
     // Close the modal
     closeModal();
@@ -172,8 +184,7 @@ async function handlePause(id) {
   try {
     await downloadService.updateDownloadStatus(id, "paused");
     // Refresh data
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error pausing download:", error);
   }
@@ -183,8 +194,7 @@ async function handleResume(id) {
   try {
     await downloadService.updateDownloadStatus(id, "downloading");
     // Refresh data
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error resuming download:", error);
   }
@@ -194,8 +204,7 @@ async function handleDelete(id) {
   try {
     await downloadService.deleteDownload(id);
     // Refresh data
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error deleting download:", error);
   }
@@ -205,8 +214,7 @@ async function handleRetry(id) {
   try {
     await downloadService.updateDownloadStatus(id, "downloading");
     // Refresh data
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error retrying download:", error);
   }
@@ -219,8 +227,7 @@ async function handleBatchDelete(ids) {
     await Promise.all(ids.map(id => downloadService.deleteDownload(id)));
     
     // 刷新数据
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error batch deleting downloads:", error);
   }
@@ -232,8 +239,7 @@ async function handleBatchRestart(ids) {
     await Promise.all(ids.map(id => downloadService.updateDownloadStatus(id, "downloading")));
     
     // 刷新数据
-    recentDownloads.value = await downloadService.getRecentDownloads();
-    stats.value = await downloadService.getDownloadStats();
+    await refreshData();
   } catch (error) {
     console.error("Error batch restarting downloads:", error);
   }
