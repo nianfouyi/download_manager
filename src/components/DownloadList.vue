@@ -3,6 +3,27 @@
     <div class="list-header">
       <h2 class="list-title">{{ title }}</h2>
       <div class="list-actions">
+        <!-- 批量操作按钮 -->
+        <div class="batch-actions" v-if="selectedDownloads.size > 0">
+          <button class="action-btn batch-delete" @click="showBatchDeleteModal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+              <path d="m10 11 6"></path>
+              <path d="m12 17 6"></path>
+            </svg>
+            删除选中 ({{ selectedDownloads.size }})
+          </button>
+          <button class="action-btn batch-restart" @click="batchRestart">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            重新开始 ({{ selectedDownloads.size }})
+          </button>
+        </div>
+        
         <button v-if="canSelectAll" class="action-btn select-all" @click="toggleSelectAll">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="9 11 12 14 22 4"></polyline>
@@ -81,6 +102,30 @@
         </div>
       </div>
     </transition>
+    
+    <!-- 批量删除确认模态框 -->
+    <transition name="fade">
+      <div v-if="showBatchModal" class="modal-overlay" @click="closeBatchModal">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h3>批量删除确认</h3>
+            <button class="close-modal" @click="closeBatchModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>确定要删除选中的 {{ selectedDownloads.size }} 个下载任务吗？此操作无法撤销。</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn cancel" @click="closeBatchModal">取消</button>
+            <button class="btn delete" @click="confirmBatchDelete">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -133,11 +178,12 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['pause', 'resume', 'delete', 'retry'])
+const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'batch-delete', 'batch-restart'])
 
 const currentPage = ref(1)
 const searchQuery = ref('')
 const showModal = ref(false)
+const showBatchModal = ref(false)
 const downloadToDelete = ref(null)
 
 const pollingTimer = ref(null)
@@ -324,6 +370,28 @@ function confirmDelete() {
     closeModal()
   }
 }
+
+// 批量操作方法
+function showBatchDeleteModal() {
+  showBatchModal.value = true
+}
+
+function batchRestart() {
+  const selectedIds = Array.from(selectedDownloads.value)
+  emit('batch-restart', selectedIds)
+  selectedDownloads.value.clear()
+}
+
+function confirmBatchDelete() {
+  const selectedIds = Array.from(selectedDownloads.value)
+  emit('batch-delete', selectedIds)
+  selectedDownloads.value.clear()
+  closeBatchModal()
+}
+
+function closeBatchModal() {
+  showBatchModal.value = false
+}
 </script>
 
 <style scoped>
@@ -349,6 +417,13 @@ function confirmDelete() {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .action-btn {
@@ -358,15 +433,37 @@ function confirmDelete() {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: var(--border-radius);
-  background-color: var(--primary-color);
-  color: white;
   font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
+  white-space: nowrap;
 }
 
-.action-btn:hover {
+.action-btn.select-all {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.action-btn.select-all:hover {
   background-color: #3951d4;
+}
+
+.action-btn.batch-delete {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.action-btn.batch-delete:hover {
+  background-color: #d32f2f;
+}
+
+.action-btn.batch-restart {
+  background-color: #4caf50;
+  color: white;
+}
+
+.action-btn.batch-restart:hover {
+  background-color: #45a049;
 }
 
 .search-container {
@@ -566,6 +663,14 @@ function confirmDelete() {
   .list-actions {
     width: 100%;
     justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .batch-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
   
   .search-input {

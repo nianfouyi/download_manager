@@ -15,13 +15,15 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true
+        target: 'https://192.168.5.253:10000',
+        changeOrigin: true,
+        secure: false // Allow self-signed certificates
       },
       '/ws': {
-        target: 'ws://localhost:5000',
+        target: 'wss://192.168.5.253:10000',
         ws: true,
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false // Allow self-signed certificates
       }
     }
   }

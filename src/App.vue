@@ -8,6 +8,7 @@ import DownloadList from "./components/DownloadList.vue";
 import DownloadItem from "./components/DownloadItem.vue";
 import FloatingButton from "./components/FloatingButton.vue";
 import AddDownloadModal from "./components/AddDownloadModal.vue";
+import downloadService from "./services/downloadService.js";
 
 
 // Sidebar state
@@ -71,10 +72,12 @@ const filteredDownloads = computed(() => {
     // 已完成
     return recentDownloads.value.filter((item) => item.status === "complete");
   } else if (activeTabIndex.value === 4) {
-    // 正在下载
-    return recentDownloads.value.filter(
+    // 正在下载 - 包含downloading状态的任务（包括原本的downloading和merging状态）
+    const downloadingItems = recentDownloads.value.filter(
       (item) => item.status === "downloading"
     );
+    console.log('🚀 正在下载的任务数量:', downloadingItems.length, '任务详情:', downloadingItems.map(item => ({id: item.id, status: item.status, title: item.title})));
+    return downloadingItems;
   } else if (activeTabIndex.value === 5) {
     // 已暂停
     return recentDownloads.value.filter((item) => item.status === "paused");
@@ -186,34 +189,32 @@ async function handleRetry(id) {
   }
 }
 
-// 添加选中状态管理
-const selectedDownloads = ref(new Set());
-
-// 全选/取消全选功能
-function toggleSelectAll() {
-  if (selectedDownloads.value.size === filteredDownloads.value.length) {
-    // 如果已经全选，则取消全选
-    selectedDownloads.value.clear();
-  } else {
-    // 否则全选当前过滤的下载项
-    selectedDownloads.value = new Set(filteredDownloads.value.map(d => d.id));
+// 批量操作处理方法
+async function handleBatchDelete(ids) {
+  try {
+    // 批量删除所有选中的任务
+    await Promise.all(ids.map(id => downloadService.deleteDownload(id)));
+    
+    // 刷新数据
+    recentDownloads.value = await downloadService.getRecentDownloads();
+    stats.value = await downloadService.getDownloadStats();
+  } catch (error) {
+    console.error("Error batch deleting downloads:", error);
   }
 }
 
-// 切换单个下载项的选中状态
-function toggleSelectDownload(id) {
-  if (selectedDownloads.value.has(id)) {
-    selectedDownloads.value.delete(id);
-  } else {
-    selectedDownloads.value.add(id);
+async function handleBatchRestart(ids) {
+  try {
+    // 批量重新开始所有选中的任务
+    await Promise.all(ids.map(id => downloadService.updateDownloadStatus(id, "downloading")));
+    
+    // 刷新数据
+    recentDownloads.value = await downloadService.getRecentDownloads();
+    stats.value = await downloadService.getDownloadStats();
+  } catch (error) {
+    console.error("Error batch restarting downloads:", error);
   }
 }
-
-// 计算是否全选的状态
-const isAllSelected = computed(() => {
-  return filteredDownloads.value.length > 0 && 
-         selectedDownloads.value.size === filteredDownloads.value.length;
-});
 </script>
 
 <template>
@@ -244,6 +245,8 @@ const isAllSelected = computed(() => {
         @resume="handleResume"
         @delete="handleDelete"
         @retry="handleRetry"
+        @batch-delete="handleBatchDelete"
+        @batch-restart="handleBatchRestart"
       />
     </template>
 

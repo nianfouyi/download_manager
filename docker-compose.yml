@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: missav_frontend:latest
+    container_name: missav_frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - download-network
+
+networks:
+  download-network:
+    driver: bridge
