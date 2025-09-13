@@ -4,7 +4,7 @@
 
 这是一个基于Go语言开发的M3U8视频下载服务，支持直接通过M3U8链接和标题创建下载任务。
 
-- **Base URL**: `https://192.168.5.253:10000/api/v1`
+- **Base URL**: `http://localhost:8080/api/v1`
 - **版本**: v1.0
 - **协议**: HTTP/HTTPS + WebSocket
 
@@ -63,7 +63,7 @@
 #### 请求示例
 
 ```bash
-curl -X POST https://192.168.5.253:10000/api/v1/tasks \
+curl -X POST http://localhost:8080/api/v1/tasks \
   -H "Content-Type: application/json" \
   -d '{
     "m3u8_url": "https://cdn.example.com/video.m3u8",
@@ -126,13 +126,13 @@ curl -X POST https://192.168.5.253:10000/api/v1/tasks \
 
 ```bash
 # 获取所有任务
-curl https://192.168.5.253:10000/api/v1/tasks
+curl http://localhost:8080/api/v1/tasks
 
 # 获取已完成的任务
-curl https://192.168.5.253:10000/api/v1/tasks?status=completed
+curl http://localhost:8080/api/v1/tasks?status=completed
 
 # 分页获取任务
-curl https://192.168.5.253:10000/api/v1/tasks?limit=10&offset=20
+curl http://localhost:8080/api/v1/tasks?limit=10&offset=20
 ```
 
 #### 成功响应
@@ -144,7 +144,7 @@ curl https://192.168.5.253:10000/api/v1/tasks?limit=10&offset=20
     "tasks": [
       {
         "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "url": "https://example.com/video-page",
+        
         "save_directory": "./downloads",
         "filename": "电影标题.mp4",
         "title": "电影标题",
@@ -174,7 +174,7 @@ curl https://192.168.5.253:10000/api/v1/tasks?limit=10&offset=20
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+curl http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
 #### 成功响应
@@ -184,7 +184,7 @@ curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef12345678
   "success": true,
   "data": {
     "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "url": "https://example.com/video-page",
+    
     "save_directory": "./downloads",
     "filename": "电影标题.mp4",
     "title": "电影标题",
@@ -211,7 +211,7 @@ curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef12345678
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/progress
+curl http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/progress
 ```
 
 #### 成功响应
@@ -231,7 +231,39 @@ curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef12345678
 }
 ```
 
-### 1.5 暂停任务
+### 1.5 获取任务计时统计
+
+**GET** `/api/v1/tasks/{id}/timing`
+
+返回任务各阶段耗时与效率统计。
+
+#### 请求示例
+
+```bash
+curl http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/timing
+```
+
+#### 成功响应
+
+```json
+{
+  "success": true,
+  "data": {
+    "total_duration": "32m15s",
+    "parse_duration": "1.2s",
+    "download_duration": "28m3s",
+    "merge_duration": "2m10s",
+    "optimize_duration": "3.4s",
+    "download_speed": "2.5 MB/s",
+    "merge_speed": "120.0 segments/s",
+    "is_completed": true,
+    "efficiency": "Good (55.3 seg/min)"
+  },
+  "message": "Task timing statistics retrieved successfully"
+}
+```
+
+### 1.6 暂停任务
 
 **POST** `/api/v1/tasks/{id}/pause`
 
@@ -240,7 +272,7 @@ curl https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef12345678
 #### 请求示例
 
 ```bash
-curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/pause
+curl -X POST http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/pause
 ```
 
 #### 成功响应
@@ -253,7 +285,7 @@ curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef
 }
 ```
 
-### 1.6 恢复/重启任务
+### 1.7 恢复/重启任务
 
 **POST** `/api/v1/tasks/{id}/resume`
 
@@ -267,7 +299,7 @@ curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef
 #### 请求示例
 
 ```bash
-curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/resume
+curl -X POST http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890/resume
 ```
 
 #### 成功响应
@@ -280,7 +312,7 @@ curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef
 }
 ```
 
-### 1.7 删除任务（移入回收站）
+### 1.8 删除任务（移入回收站）
 
 **DELETE** `/api/v1/tasks/{id}`
 
@@ -289,7 +321,7 @@ curl -X POST https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef
 #### 请求示例
 
 ```bash
-curl -X DELETE https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+curl -X DELETE http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
 #### 成功响应
@@ -322,7 +354,7 @@ curl -X DELETE https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/recycle?limit=10&offset=0
+curl http://localhost:8080/api/v1/recycle?limit=10&offset=0
 ```
 
 #### 成功响应
@@ -368,7 +400,7 @@ curl https://192.168.5.253:10000/api/v1/recycle?limit=10&offset=0
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/recycle/stats
+curl http://localhost:8080/api/v1/recycle/stats
 ```
 
 #### 成功响应
@@ -393,7 +425,7 @@ curl https://192.168.5.253:10000/api/v1/recycle/stats
 #### 请求示例
 
 ```bash
-curl -X POST https://192.168.5.253:10000/api/v1/recycle/recycle-item-id/restore
+curl -X POST http://localhost:8080/api/v1/recycle/recycle-item-id/restore
 ```
 
 #### 成功响应
@@ -419,7 +451,7 @@ curl -X POST https://192.168.5.253:10000/api/v1/recycle/recycle-item-id/restore
 #### 请求示例
 
 ```bash
-curl -X DELETE https://192.168.5.253:10000/api/v1/recycle/recycle-item-id
+curl -X DELETE http://localhost:8080/api/v1/recycle/recycle-item-id
 ```
 
 #### 成功响应
@@ -444,7 +476,7 @@ curl -X DELETE https://192.168.5.253:10000/api/v1/recycle/recycle-item-id
 #### 请求示例
 
 ```bash
-curl -X DELETE https://192.168.5.253:10000/api/v1/recycle
+curl -X DELETE http://localhost:8080/api/v1/recycle
 ```
 
 #### 成功响应
@@ -469,7 +501,7 @@ curl -X DELETE https://192.168.5.253:10000/api/v1/recycle
 #### 请求示例
 
 ```bash
-curl -X POST https://192.168.5.253:10000/api/v1/recycle/cleanup
+curl -X POST http://localhost:8080/api/v1/recycle/cleanup
 ```
 
 #### 成功响应
@@ -506,15 +538,17 @@ ws.onmessage = function(event) {
 };
 ```
 
-#### 接收消息格式
+#### 接收消息格式（服务端实际推送）
 
 ```json
 {
-  "total_segments": 100,
-  "completed_segments": 45,
-  "progress": 45.0,
+  "type": "progress",
+  "taskId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "downloading",
-  "error_message": ""
+  "progress": 45.0,
+  "totalSegments": 100,
+  "completedSegments": 45,
+  "errorMessage": ""
 }
 ```
 
@@ -524,29 +558,51 @@ ws.onmessage = function(event) {
 
 监听所有任务的实时进度更新。
 
-#### 连接示例
+#### 连接示例（需先订阅任务）
 
 ```javascript
 const ws = new WebSocket('ws://localhost:8080/api/v1/ws/global');
 
-ws.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    console.log(`任务 ${data.task_id} 进度更新:`, data.progress);
+ws.onopen = () => {
+  // 订阅单个任务
+  ws.send(JSON.stringify({ type: 'subscribe', taskId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' }));
+  // 或订阅多个任务
+  // ws.send(JSON.stringify({ type: 'subscribe', taskIds: ['id1', 'id2'] }));
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'progress') {
+    console.log(`任务 ${data.taskId} 进度:`, data.progress);
+  } else if (data.type === 'ack') {
+    console.log('订阅确认:', data);
+  } else if (data.type === 'error') {
+    console.error('错误:', data.data?.message);
+  }
 };
 ```
 
-#### 接收消息格式
+#### 接收消息格式（服务端实际推送）
+
+与单任务监听相同：
 
 ```json
 {
-  "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "total_segments": 100,
-  "completed_segments": 45,
-  "progress": 45.0,
+  "type": "progress",
+  "taskId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "status": "downloading",
-  "error_message": ""
+  "progress": 45.0,
+  "totalSegments": 100,
+  "completedSegments": 45,
+  "errorMessage": ""
 }
 ```
+
+可用的客户端消息类型：
+
+- `subscribe`: 订阅任务进度。字段：`taskId` 或 `taskIds` 数组。
+- `unsubscribe`: 取消订阅。字段：`taskId` 或 `taskIds` 数组。
+- `ping`: 心跳，服务端返回 `{"type":"pong"}`。
 
 ---
 
@@ -561,7 +617,7 @@ ws.onmessage = function(event) {
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/health
+curl http://localhost:8080/api/v1/health
 ```
 
 #### 成功响应
@@ -579,31 +635,7 @@ curl https://192.168.5.253:10000/api/v1/health
 
 ### 4.2 获取系统状态
 
-**GET** `/api/v1/status`
-
-获取系统运行状态，包括活跃任务数量等信息。
-
-#### 请求示例
-
-```bash
-curl https://192.168.5.253:10000/api/v1/status
-```
-
-#### 成功响应
-
-```json
-{
-  "success": true,
-  "data": {
-    "active_tasks": 2,
-    "max_concurrent_tasks": 3,
-    "total_tasks": 15,
-    "system_status": "running",
-    "available_slots": 1
-  },
-  "message": "System status retrieved successfully"
-}
-```
+当前版本未提供 `/api/v1/status` 接口。如需该接口可在后续版本加入（例如返回活跃任务数量等）。
 
 ### 4.3 获取配置信息
 
@@ -614,7 +646,7 @@ curl https://192.168.5.253:10000/api/v1/status
 #### 请求示例
 
 ```bash
-curl https://192.168.5.253:10000/api/v1/config
+curl http://localhost:8080/api/v1/config
 ```
 
 #### 成功响应
@@ -650,7 +682,7 @@ curl https://192.168.5.253:10000/api/v1/config
 
 ```bash
 # 1. 创建下载任务
-TASK_RESPONSE=$(curl -s -X POST https://192.168.5.253:10000/api/v1/tasks \
+TASK_RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/tasks \
   -H "Content-Type: application/json" \
   -d '{
     "m3u8_url": "https://cdn.example.com/video.m3u8",
@@ -666,7 +698,7 @@ echo "任务ID: $TASK_ID"
 
 # 4. 查询任务状态
 while true; do
-  STATUS=$(curl -s https://192.168.5.253:10000/api/v1/tasks/$TASK_ID | jq -r '.data.status')
+  STATUS=$(curl -s http://localhost:8080/api/v1/tasks/$TASK_ID | jq -r '.data.status')
   echo "当前状态: $STATUS"
   
   if [ "$STATUS" = "completed" ] || [ "$STATUS" = "failed" ]; then
@@ -683,16 +715,16 @@ echo "下载完成!"
 
 ```bash
 # 1. 删除任务（移入回收站）
-curl -X DELETE https://192.168.5.253:10000/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+curl -X DELETE http://localhost:8080/api/v1/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 
 # 2. 查看回收站
-curl https://192.168.5.253:10000/api/v1/recycle
+curl http://localhost:8080/api/v1/recycle
 
 # 3. 恢复任务
-curl -X POST https://192.168.5.253:10000/api/v1/recycle/recycle-item-id/restore
+curl -X POST http://localhost:8080/api/v1/recycle/recycle-item-id/restore
 
 # 4. 清理过期项目
-curl -X POST https://192.168.5.253:10000/api/v1/recycle/cleanup
+curl -X POST http://localhost:8080/api/v1/recycle/cleanup
 ```
 
 ---

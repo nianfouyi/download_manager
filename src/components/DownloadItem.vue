@@ -1,6 +1,6 @@
 <template>
-  <div class="download-item" :class="{ 'selected': isSelected }">
-    <div class="download-select">
+<div class="download-item" :class="{ 'selected': isSelected }">
+    <div v-if="selectable" class="download-select">
       <input 
         type="checkbox" 
         :checked="isSelected" 
@@ -16,32 +16,51 @@
       <div class="download-header">
         <div class="download-title">{{ download.title }}</div>
         <div class="download-actions">
-          <button v-if="download.status === 'downloading'" class="action-btn pause" @click="pauseDownload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="6" y="4" width="4" height="16"></rect>
-              <rect x="14" y="4" width="4" height="16"></rect>
-            </svg>
-          </button>
-          <button v-if="download.status === 'paused'" class="action-btn resume" @click="resumeDownload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-          </button>
-          <button v-if="download.status === 'error'" class="action-btn retry" @click="retryDownload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="1 4 1 10 7 10"></polyline>
-              <polyline points="23 20 23 14 17 14"></polyline>
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-            </svg>
-          </button>
-          <button class="action-btn delete" @click="deleteDownload">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
+          <template v-if="mode === 'normal'">
+            <button v-if="download.status === 'downloading'" class="action-btn pause" @click="pauseDownload">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+            </button>
+            <button v-if="download.status === 'paused'" class="action-btn resume" @click="resumeDownload">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </button>
+            <button v-if="download.status === 'error'" class="action-btn retry" @click="retryDownload">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <polyline points="23 20 23 14 17 14"></polyline>
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+              </svg>
+            </button>
+            <button class="action-btn delete" @click="deleteDownload">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+          </template>
+          <template v-else-if="mode === 'recycle'">
+            <button class="action-btn resume" title="恢复" @click="() => $emit('restore-confirm', download.recycleItemId)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </button>
+            <button class="action-btn delete" title="彻底删除" @click="() => $emit('permanent-delete-confirm', download.recycleItemId)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+              </svg>
+            </button>
+          </template>
         </div>
       </div>
       
@@ -94,10 +113,18 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
+  },
+  mode: {
+    type: String,
+    default: 'normal'
+  },
+  selectable: {
+    type: Boolean,
+    default: true
   }
 })
 
-const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'select'])
+const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'select', 'restore', 'permanent-delete', 'restore-confirm', 'permanent-delete-confirm'])
 
 function formatUpdatedTime(updatedAt) {
   if (!updatedAt) return ''
@@ -142,6 +169,8 @@ function deleteDownload() {
 function retryDownload() {
   emit('retry', props.download.id)
 }
+
+// 单项回收站操作改为先弹确认，由父组件拉起
 </script>
 
 <style scoped>

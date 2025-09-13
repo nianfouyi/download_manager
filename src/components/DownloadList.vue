@@ -5,7 +5,7 @@
       <div class="list-actions">
         <!-- 批量操作按钮 -->
         <div class="batch-actions" v-if="selectedDownloads.size > 0">
-          <button class="action-btn batch-delete" @click="showBatchDeleteModal">
+          <button v-if="!isRecycle" class="action-btn batch-delete" @click="showBatchDeleteModal">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
@@ -14,13 +14,30 @@
             </svg>
             删除选中 ({{ selectedDownloads.size }})
           </button>
-          <button class="action-btn batch-restart" @click="batchRestart">
+          <button v-if="!isRecycle" class="action-btn batch-restart" @click="batchRestart">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="23 4 23 10 17 10"></polyline>
               <polyline points="1 20 1 14 7 14"></polyline>
               <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
             重新开始 ({{ selectedDownloads.size }})
+          </button>
+          <button v-if="isRecycle" class="action-btn batch-restart" @click="showRecycleBatchModal('restore')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            批量恢复 ({{ selectedDownloads.size }})
+          </button>
+          <button v-if="isRecycle" class="action-btn batch-delete" @click="showRecycleBatchModal('permanent-delete')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+              <path d="m10 11 6"></path>
+              <path d="m12 17 6"></path>
+            </svg>
+            批量彻底删除 ({{ selectedDownloads.size }})
           </button>
         </div>
         
@@ -55,12 +72,16 @@
         v-for="download in filteredDownloads" 
         :key="download.id" 
         :download="download"
-        :is-selected="selectedDownloads.has(download.id)"
-        @select="toggleSelectDownload(download.id)"
+        :is-selected="selectedDownloads.has(getItemKey(download))"
+        :mode="mode"
+        :selectable="true"
+        @select="toggleSelectDownload(getItemKey(download))"
         @pause="pauseDownload"
         @resume="resumeDownload"
         @delete="showDeleteModal"
         @retry="retryDownload"
+        @restore-confirm="(id) => showRecycleItemConfirm('restore', id)"
+        @permanent-delete-confirm="(id) => showRecycleItemConfirm('permanent-delete', id)"
       />
     </div>
     
@@ -126,6 +147,60 @@
         </div>
       </div>
     </transition>
+
+    <!-- 回收站单项确认 -->
+    <transition name="fade">
+      <div v-if="showRecycleItemModal" class="modal-overlay" @click="closeRecycleItemModal">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h3>{{ recycleActionType === 'restore' ? '确认恢复' : '确认彻底删除' }}</h3>
+            <button class="close-modal" @click="closeRecycleItemModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>
+              {{ recycleActionType === 'restore' ? '确定要恢复该任务吗？' : '确定要永久删除该任务吗？此操作不可恢复。' }}
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn cancel" @click="closeRecycleItemModal">取消</button>
+            <button class="btn delete" @click="confirmRecycleItem">确认</button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 回收站批量确认 -->
+    <transition name="fade">
+      <div v-if="showRecycleBatchModalRef" class="modal-overlay" @click="closeRecycleBatchModal">
+        <div class="modal" @click.stop>
+          <div class="modal-header">
+            <h3>{{ recycleBatchActionType === 'restore' ? '批量恢复确认' : '批量彻底删除确认' }}</h3>
+            <button class="close-modal" @click="closeRecycleBatchModal">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>
+              {{ recycleBatchActionType === 'restore' 
+                  ? `确定要恢复选中的 ${selectedDownloads.size} 个任务吗？`
+                  : `确定要永久删除选中的 ${selectedDownloads.size} 个任务吗？此操作不可恢复。` }}
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn cancel" @click="closeRecycleBatchModal">取消</button>
+            <button class="btn delete" @click="confirmRecycleBatch">确认</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -139,7 +214,7 @@ function toggleSelectAll() {
   if (selectedDownloads.value.size === filteredDownloads.value.length) {
     selectedDownloads.value.clear();
   } else {
-    selectedDownloads.value = new Set(filteredDownloads.value.map(d=> d.id));
+    selectedDownloads.value = new Set(filteredDownloads.value.map(d=> getItemKey(d)));
   }
 }
 
@@ -175,10 +250,20 @@ const props = defineProps({
   canSelectAll: {
     type: Boolean,
     default: true
+  },
+  mode: {
+    type: String,
+    default: 'normal'
   }
 })
 
-const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'batch-delete', 'batch-restart'])
+const emit = defineEmits(['pause', 'resume', 'delete', 'retry', 'batch-delete', 'batch-restart', 'restore', 'permanent-delete', 'batch-restore', 'batch-permanent-delete'])
+
+const isRecycle = computed(() => props.mode === 'recycle')
+
+function getItemKey(download) {
+  return isRecycle.value ? download.recycleItemId : download.id;
+}
 
 const currentPage = ref(1)
 const searchQuery = ref('')
@@ -186,126 +271,18 @@ const showModal = ref(false)
 const showBatchModal = ref(false)
 const downloadToDelete = ref(null)
 
-const pollingTimer = ref(null)
-const wsConnection = ref(null)
+// 组件不直接处理进度轮询或WebSocket，由父组件负责
 
-const POLLING_INTERVAL = 2000 // 2秒轮询一次
+onMounted(() => {})
 
-function connectWebSocket() {
-  wsConnection.value = new WebSocket('ws://localhost:8080/ws/downloads')
-  wsConnection.value.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    if (data.type === 'progress') {
-      updateDownloadProgress(data.downloadId, data.progress, data.speed, data.status)
-    }
-  }
-  wsConnection.value.onerror = (error) => {
-    console.error('WebSocket连接错误:', error)
-    startPolling()
-  }
+onUnmounted(() => {})
+
+function pauseDownload(id) {
+  emit('pause', id)
 }
 
-function startPolling() {
-  if (pollingTimer.value) {
-    clearInterval(pollingTimer.value)
-  }
-  
-  pollingTimer.value = setInterval(async () => {
-    try {
-      const response = await fetch('/api/downloads/progress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ids: props.downloads.map(d => d.id)
-        })
-      })
-      const data = await response.json()
-      if (data.code === 200) {
-        data.data.forEach(update => {
-          updateDownloadProgress(update.id, update.progress, update.speed, update.status)
-        })
-      }
-    } catch (error) {
-      console.error('获取下载进度失败:', error)
-    }
-  }, POLLING_INTERVAL)
-}
-
-function updateDownloadProgress(downloadId, progress, speed, status) {
-  const download = props.downloads.find(d => d.id === downloadId)
-  if (download) {
-    download.progress = progress
-    download.speed = speed
-    download.status = status
-  }
-}
-
-onMounted(async () => {
-  try {
-    // 尝试建立WebSocket连接
-    connectWebSocket()
-    
-    // 如果WebSocket连接失败，启动轮询
-    if (!wsConnection.value) {
-      startPolling()
-    }
-    
-    // 获取初始下载列表
-    await fetchDownloads()
-  } catch (error) {
-    console.error('初始化失败:', error)
-  }
-})
-
-onUnmounted(() => {
-  if (pollingTimer.value) {
-    clearInterval(pollingTimer.value)
-  }
-  if (wsConnection.value) {
-    wsConnection.value.close()
-  }
-})
-
-async function pauseDownload(id) {
-  try {
-    const response = await fetch(`/api/downloads/${id}/pause`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    const data = await response.json()
-    if (data.code === 200) {
-      const download = props.downloads.find(d => d.id === id)
-      if (download) {
-        download.status = 'paused'
-      }
-    }
-  } catch (error) {
-    console.error('暂停下载失败:', error)
-  }
-}
-
-async function resumeDownload(id) {
-  try {
-    const response = await fetch(`/api/downloads/${id}/resume`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    const data = await response.json()
-    if (data.code === 200) {
-      const download = props.downloads.find(d => d.id === id)
-      if (download) {
-        download.status = 'downloading'
-      }
-    }
-  } catch (error) {
-    console.error('继续下载失败:', error)
-  }
+function resumeDownload(id) {
+  emit('resume', id)
 }
 
 const filteredDownloads = computed(() => {
@@ -371,6 +348,14 @@ function confirmDelete() {
   }
 }
 
+function restoreItem(recycleItemId) {
+  emit('restore', recycleItemId)
+}
+
+function permanentDeleteItem(recycleItemId) {
+  emit('permanent-delete', recycleItemId)
+}
+
 // 批量操作方法
 function showBatchDeleteModal() {
   showBatchModal.value = true
@@ -401,6 +386,55 @@ function closeBatchModal() {
 defineExpose({
   clearSelection
 })
+
+// 回收站批量/单项确认弹窗
+const showRecycleItemModal = ref(false)
+const recycleActionType = ref('restore') // 'restore' | 'permanent-delete'
+const recycleItemToAct = ref(null)
+
+const showRecycleBatchModalRef = ref(false)
+const recycleBatchActionType = ref('restore')
+
+function showRecycleItemConfirm(type, recycleItemId) {
+  recycleActionType.value = type
+  recycleItemToAct.value = recycleItemId
+  showRecycleItemModal.value = true
+}
+
+function closeRecycleItemModal() {
+  showRecycleItemModal.value = false
+  recycleItemToAct.value = null
+}
+
+function confirmRecycleItem() {
+  if (!recycleItemToAct.value) return
+  if (recycleActionType.value === 'restore') {
+    emit('restore', recycleItemToAct.value)
+  } else {
+    emit('permanent-delete', recycleItemToAct.value)
+  }
+  closeRecycleItemModal()
+}
+
+function showRecycleBatchModal(type) {
+  recycleBatchActionType.value = type
+  showRecycleBatchModalRef.value = true
+}
+
+function closeRecycleBatchModal() {
+  showRecycleBatchModalRef.value = false
+}
+
+function confirmRecycleBatch() {
+  const ids = Array.from(selectedDownloads.value)
+  if (recycleBatchActionType.value === 'restore') {
+    emit('batch-restore', ids)
+  } else {
+    emit('batch-permanent-delete', ids)
+  }
+  selectedDownloads.value.clear()
+  closeRecycleBatchModal()
+}
 </script>
 
 <style scoped>
